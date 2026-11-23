@@ -1,4 +1,5 @@
-# Detecção e mitigação de DoS/DDoS — Grupo 16
+# Detecção e mitigação de DoS/DDoS
+# Grupo 16
 
 Laboratório isolado em Docker para executar ataques de negação de serviço contra um servidor web e medir o efeito das contramedidas. Todo o ambiente roda localmente, sem expor nada à internet.
 
