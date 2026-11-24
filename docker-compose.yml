@@ -10,7 +10,7 @@ services:
       - net.ipv4.conf.all.rp_filter=0
       - net.ipv4.conf.default.rp_filter=0
     volumes:
-      - ./vitima/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./vitima/conf:/configs:ro
       - ./vitima/site:/usr/share/nginx/html:ro
       - ./vitima/firewall.nft:/etc/firewall.nft:ro
     networks:
@@ -30,6 +30,8 @@ services:
     cap_add:
       - NET_ADMIN
       - NET_RAW
+    volumes:
+      - ./ataques:/ataques:ro
     networks:
       - labnet
 
