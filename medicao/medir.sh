@@ -11,6 +11,7 @@ amostras=$(docker exec cliente sh -c '
   i=0
   while [ $i -lt '"$total"' ]; do
     curl -s -o /dev/null -w "%{http_code} %{time_total}\n" --max-time 2 http://vitima/ 2>/dev/null || echo "000 2"
+    sleep 0.1
     i=$((i + 1))
   done
 ')

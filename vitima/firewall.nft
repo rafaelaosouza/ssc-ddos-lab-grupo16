@@ -1,0 +1,10 @@
+flush ruleset
+
+table inet filtro {
+    chain entrada {
+        type filter hook input priority 0; policy accept;
+
+        tcp dport 80 tcp flags & (syn | ack) == syn \
+            meter floods { ip saddr limit rate over 20/second } drop
+    }
+}
