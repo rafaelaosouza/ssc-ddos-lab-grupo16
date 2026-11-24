@@ -77,6 +77,36 @@ O ataque faz o `SYN-RECV` saltar de 0 para mais de uma centena e o tempo de resp
 
 A vítima roda com SYN cookies desativados e `rp_filter` desligado (em `docker-compose.yml`) para que as conexões meia-abertas forjadas fiquem visíveis. No Docker Desktop em macOS a camada de rede virtualizada limita a taxa real do flood, então o ataque não zera a disponibilidade: o efeito mensurável é o acúmulo de `SYN-RECV` e o aumento de latência, que o firewall elimina. Como o limite é por origem, ele neutraliza um atacante de origem única; um ataque realmente distribuído exigiria defesas adicionais, como SYN cookies.
 
+## Ataque 2: Slowloris e mitigação no Nginx
+
+O Slowloris abre muitas conexões com o servidor e envia requisições HTTP incompletas, bem devagar, sem nunca terminar. A vítima mantém cada conexão aberta esperando o resto da requisição; com conexões suficientes, esgota a capacidade e para de atender novos usuários. É um ataque de camada de aplicação: usa pouca banda e derruba o serviço. A ferramenta é um script Python próprio (`ataques/slowloris.py`), no container `atacante`.
+
+A defesa são ajustes no Nginx (`vitima/conf/defesa.conf`, aplicados pelo `defesa/nginx.sh`): timeouts curtos de leitura da requisição (`client_header_timeout` e `client_body_timeout`), que fecham conexões lentas antes que se acumulem; capacidade adequada (`worker_connections`); e limites por origem (`limit_conn`, `limit_req`).
+
+Experimento completo:
+
+```bash
+bash experimentos/slowloris.sh
+```
+
+Comandos individuais:
+
+```bash
+bash ataques/atacar_slowloris.sh 300 60
+```
+
+```bash
+bash defesa/nginx.sh on
+```
+
+```bash
+bash defesa/nginx.sh off
+```
+
+O ataque leva a disponibilidade a 0% (servidor fora do ar) e lota as conexões `ESTABLISHED`; com a defesa, a disponibilidade volta a 100% e as conexões ficam sob controle.
+
+Observação importante: o `limit_conn` sozinho não detém o Slowloris, porque a requisição nunca se completa e não chega à fase em que o limite é aplicado. Quem neutraliza o ataque é o timeout curto, que fecha as conexões lentas. Nos testes, só o timeout curto (com `worker_connections` baixo) já recuperou a disponibilidade de 0% para cerca de 77%; combinado com capacidade adequada, chegou a 100%.
+
 ## Como derrubar o ambiente
 
 ```bash
