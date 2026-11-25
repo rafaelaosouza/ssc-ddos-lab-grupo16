@@ -5,7 +5,7 @@ amostras="${1:-30}"
 conexoes="${2:-300}"
 
 iniciar_ataque() {
-    docker exec atacante python3 /ataques/slowloris.py vitima "$conexoes" 120 >/dev/null 2>&1 &
+    bash ataques/atacar_slowloris.sh "$conexoes" 120 >/dev/null 2>&1 &
 }
 
 parar_ataque() {

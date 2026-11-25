@@ -35,6 +35,21 @@ services:
     networks:
       - labnet
 
+  ids:
+    image: jasonish/suricata:latest
+    container_name: ids
+    network_mode: "service:vitima"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_NICE
+    volumes:
+      - ./ids/regras.rules:/regras/regras.rules:ro
+      - ./ids/logs:/var/log/suricata
+    command: -i eth0 -S /regras/regras.rules -l /var/log/suricata
+    depends_on:
+      - vitima
+
 networks:
   labnet:
     name: labnet

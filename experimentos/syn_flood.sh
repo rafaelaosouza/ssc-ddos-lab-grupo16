@@ -2,10 +2,9 @@
 set -euo pipefail
 
 amostras="${1:-30}"
-origem_falsa="10.99.99.99"
 
 iniciar_ataque() {
-    docker exec atacante timeout 180 hping3 -a "$origem_falsa" -S -p 80 --flood vitima >/dev/null 2>&1 &
+    bash ataques/atacar_syn.sh 180 >/dev/null 2>&1 &
 }
 
 parar_ataque() {
