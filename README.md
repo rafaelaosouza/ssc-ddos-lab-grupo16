@@ -12,6 +12,7 @@ O ambiente tem três containers numa rede privada (`labnet`):
 | `vitima`  | Servidor web atacado | Nginx |
 | `atacante`| Dispara os ataques | Debian com `hping3` e `python3` |
 | `cliente` | Simula um usuário legítimo e coleta as métricas | curl |
+| `ids`     | Detecta os ataques (modo passivo) | Suricata |
 
 A ideia do laboratório: o `cliente` mede como o servidor responde em três situações — sem ataque (baseline), sob ataque sem defesa, e sob ataque com a defesa ativa.
 
@@ -29,6 +30,12 @@ Verifique se os três containers estão de pé:
 
 ```bash
 docker compose ps
+```
+
+Se você editar arquivos do projeto (ou trocar de branch no `git`) com os containers no ar, recrie-os para recarregar as versões novas:
+
+```bash
+docker compose up -d --force-recreate
 ```
 
 ## Como medir
@@ -106,6 +113,33 @@ bash defesa/nginx.sh off
 O ataque leva a disponibilidade a 0% (servidor fora do ar) e lota as conexões `ESTABLISHED`; com a defesa, a disponibilidade volta a 100% e as conexões ficam sob controle.
 
 Observação importante: o `limit_conn` sozinho não detém o Slowloris, porque a requisição nunca se completa e não chega à fase em que o limite é aplicado. Quem neutraliza o ataque é o timeout curto, que fecha as conexões lentas. Nos testes, só o timeout curto (com `worker_connections` baixo) já recuperou a disponibilidade de 0% para cerca de 77%; combinado com capacidade adequada, chegou a 100%.
+
+## Detecção com IDS (Suricata)
+
+Além de mitigar, o laboratório detecta os ataques com um IDS. O container `ids` roda o Suricata compartilhando a rede da vítima e observando todo o tráfego que chega a ela, em modo passivo (apenas alerta, não bloqueia). As regras estão em `ids/regras.rules`:
+
+- uma detecta o **SYN flood** pela alta taxa de pacotes SYN chegando à vítima;
+- outra detecta o **Slowloris** pela quantidade de conexões abertas por uma única origem.
+
+Rodar os dois ataques e ver os alertas:
+
+```bash
+bash experimentos/ids.sh
+```
+
+Os alertas aparecem em `ids/logs/fast.log`, identificando o tipo de ataque, a origem e o alvo. Observação: como o nosso SYN flood usa uma única origem forjada, ele também dispara a regra de "muitas conexões de uma origem" — na prática as regras de um IDS costumam se sobrepor assim.
+
+## Resumo dos resultados
+
+| Cenário | Disponibilidade | Tempo médio | Conexões na vítima |
+|---------|-----------------|-------------|--------------------|
+| Baseline | 100% | ~2 ms | 0 |
+| SYN flood sem defesa | 100% | sobe | ~150 `SYN-RECV` |
+| SYN flood com firewall | 100% | normal | 0 |
+| Slowloris sem defesa | 0% | — | ~62 `ESTABLISHED` |
+| Slowloris com defesa | 100% | ~2 ms | controlado |
+
+Os números exatos de cada execução ficam em `resultados/resultados.csv`. O SYN flood não zera a disponibilidade por causa da limitação do ambiente (ver seção do ataque 1); o Slowloris, de camada de aplicação, derruba o serviço por completo.
 
 ## Como derrubar o ambiente
 
